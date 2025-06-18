@@ -26,7 +26,8 @@ This project handles:
 
 - Written in **Python** using [Polars](https://pola.rs/) for high-performance DataFrame operations.
 - Handles millions of rows efficiently.
-- Prepares input/output structures compatible with MATSim and METROPOLIS.
+- Prepares input structures compatible with METROPOLIS.
+- Allows for a structured and rigorous comparison of both models' outputs.
 
 ## Folder Structure
 Currently, there are two scripts to transform the MATSim Berlin output into Metropolis 2 input.
