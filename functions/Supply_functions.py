@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[ ]:
-
 
 import pandas as pd
 import polars as pl
@@ -12,8 +10,6 @@ from xopen import xopen
 
 
 # # Vehicles
-
-# In[ ]:
 
 
 def vehicle_reader(vehcile_path):
@@ -68,7 +64,6 @@ def vehicle_reader(vehcile_path):
     return vehicle_types
 
 
-# In[ ]:
 
 
 def make_vehicles_df(vehicle_types, POPULATION_SHARE=0.1):
@@ -144,7 +139,6 @@ def make_vehicles_df(vehicle_types, POPULATION_SHARE=0.1):
 
 # # Network
 
-# In[1]:
 
 
 def read_network(network_path):
@@ -271,7 +265,7 @@ def read_network(network_path):
     return links
 
 
-# In[ ]:
+
 
 
 def make_edges_df(links, alpha=1):
@@ -358,7 +352,6 @@ def make_edges_df(links, alpha=1):
 
 # # Format
 
-# In[ ]:
 
 
 def format_supply(edges, vehicles):
