@@ -8,6 +8,9 @@ import xml.etree.ElementTree as ET
 
 from xopen import xopen
 
+def parse_attributes(elem, my_dict):
+    for attrib in elem.attrib:
+        my_dict[attrib] = elem.attrib[attrib]
 
 # # Vehicles
 
