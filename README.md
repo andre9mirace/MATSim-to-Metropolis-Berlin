@@ -24,8 +24,8 @@ This project handles:
 
 ### ⚙️ Data Processing
 
-- Written in **Python** using [Polars](https://pola.rs/) for high-performance DataFrame operations.
-- Handles millions of rows efficiently.
+- Written in **Python** using [Polars](https://pola.rs/).
+- Handles millions of rows with small computation time.
 - Prepares input structures compatible with METROPOLIS.
 - Allows for a structured and rigorous comparison of both models' outputs.
 
