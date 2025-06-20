@@ -5,6 +5,7 @@
 import pandas as pd
 import polars as pl
 import xml.etree.ElementTree as ET
+import math
 
 from xopen import xopen
 
