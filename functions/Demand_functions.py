@@ -453,7 +453,6 @@ def summarize_trips(matsim_trips):
     This function scans the `matsim_trips` DataFrame given by the `generate_sequence` function for invalid trips
     and removes all trips in a plan that occur *after* the first invalid one. 
     A trip is considered invalid if:
-        - Its duration exceeds 86400 seconds (i.e., 24 hours),
         - Its stopping_time is negative (invalid activity).
 
     Parameters
@@ -474,7 +473,7 @@ def summarize_trips(matsim_trips):
     """
     invalid_starts = (
         matsim_trips
-        .filter((pl.col("duration") > 86400) | (pl.col("stopping_time") < 0))
+        .filter((pl.col("stopping_time") < 0))
         .group_by("plan_id")
         .agg(pl.col("trip_id").min().alias("first_invalid_trip"))
     )
