@@ -1,8 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
-
-
 import math
+import gzip
 import polars as pl
 import xml.etree.ElementTree as ET
 
@@ -14,9 +13,85 @@ def parse_attributes(elem, my_dict):
         my_dict[attrib] = elem.attrib[attrib]
 
 
+def hhmmss_str_to_seconds_expr(col: str) -> pl.Expr:
+    return (
+        pl.col(col)
+        .map_elements(
+            lambda t: sum(x * m for x, m in zip(map(int, str(t).split(":")), [3600, 60, 1]))
+            if isinstance(t, str) and ":" in t else None,
+            return_dtype=pl.Int32
+        )
+        .alias(f"{col}_secs")
+    )
+
+
+# # Read output_config for activity parameters
+
+def read_activity_parameters(activity_types_path):
+    activity_params = []
+    tree = ET.parse(activity_types_path)
+    root = tree.getroot()
+    
+    for module in root.findall(".//parameterset[@type='activityParams']"):
+        activity_type = ""
+        typical_duration = ""
+        opening_time = ""
+        closing_time = ""
+
+        for param in module.findall("param"):
+            name = param.attrib.get("name")
+            value = param.attrib.get("value")
+            if name == "activityType":
+                activity_type = value or ""
+            elif name == "typicalDuration":
+                typical_duration = value or ""
+            elif name == "openingTime":
+                opening_time = value or ""
+            elif name == "closingTime":
+                closing_time = value or ""
+
+        activity_params.append({
+            "type": activity_type,
+            "typical_duration": typical_duration,
+            "opening_time": opening_time,
+            "closing_time": closing_time
+        })
+
+    activity_df = pl.DataFrame(activity_params)
+    return activity_df
+
+
+# # Get initial departures
+
+def get_initial_dep_times(departures_path):
+    first_departures = []
+    plan_id_counter=0
+    
+    with gzip.open(departures_path, 'rt', encoding='utf-8') as f:
+        tree = ET.parse(f)
+        root = tree.getroot()
+
+        for person in root.findall('person'):
+            person_id = person.get('id')
+
+            for plan in person.findall('plan'):
+                    for elem in plan:
+                        if elem.tag == 'activity':
+                            first_departures.append({
+                                'person_id': person_id,
+                                'plan_id': plan_id_counter,
+                                'dep_time': elem.get('end_time')  # None if it doesn't exist
+                            })
+                            break  # Only the first leg
+                    plan_id_counter += 1
+
+    first_departures = pl.DataFrame(first_departures)
+
+    
+    return first_departures
+
+
 # # Read `output_plans`
-
-
 
 def plan_reader_dataframe(plan_path, selected_plans_only=True):
     
@@ -175,20 +250,6 @@ def plan_reader_dataframe(plan_path, selected_plans_only=True):
 
 
 # # Sequence activity - leg - […] - activity
-
-def hhmmss_str_to_seconds_expr(col: str) -> pl.Expr:
-    return (
-        pl.col(col)
-        .map_elements(
-            lambda t: sum(x * m for x, m in zip(map(int, str(t).split(":")), [3600, 60, 1]))
-            if isinstance(t, str) and ":" in t else None,
-            return_dtype=pl.Int32
-        )
-        .alias(f"{col}_secs")
-    )
-
-
-
 
 def generate_sequence (plans, activities, legs, routes):
     """
@@ -445,7 +506,6 @@ def generate_sequence (plans, activities, legs, routes):
     return matsim_trips
 
 
-
 def summarize_trips(matsim_trips):
     """
     Cleans and filters trips based on travel duration and stopping time criteria.
@@ -453,6 +513,7 @@ def summarize_trips(matsim_trips):
     This function scans the `matsim_trips` DataFrame given by the `generate_sequence` function for invalid trips
     and removes all trips in a plan that occur *after* the first invalid one. 
     A trip is considered invalid if:
+        - Its duration exceeds 86400 seconds (i.e., 24 hours),
         - Its stopping_time is negative (invalid activity).
 
     Parameters
@@ -473,7 +534,7 @@ def summarize_trips(matsim_trips):
     """
     invalid_starts = (
         matsim_trips
-        .filter((pl.col("stopping_time") < 0))
+        .filter((pl.col("duration") > 86400) | (pl.col("stopping_time") < 0))
         .group_by("plan_id")
         .agg(pl.col("trip_id").min().alias("first_invalid_trip"))
     )
@@ -486,7 +547,7 @@ def summarize_trips(matsim_trips):
             (pl.col("trip_id") < pl.col("first_invalid_trip"))
         )
         .drop("first_invalid_trip", "duration_right", 'route_right', 'start_link_right', 'end_link_right',
-              'person_id_right', 'tour_id_right', 'seq_index')
+              'person_id_right', 'seq_index')
     )
     return trips_cleaned
 
@@ -531,7 +592,7 @@ def generate_trips(matsim_trips, edges, vehicles):
 
     Notes
     -----
-    - `agent_id` is generated using: `agent_id = plan_id * 100 + tour_id`
+    - `agent_id` is generated using: `agent_id = plan_id*100 + tour_id`
     - `class.route` is extracted only for Road trips using edge mappings.
     - Assumes `vehicle_id == 3` corresponds to freight agents for the special walking time fix.
     - This function must follow `generate_sequence()`, `make_edges_df()` and `make_vehicles_df` to work correctly.
@@ -613,7 +674,8 @@ def generate_trips(matsim_trips, edges, vehicles):
             pl.lit(1).alias("alt_id"),
             pl.lit("Constant").alias("dt_choice.type"),
             ((pl.col("plan_id")*100).cast(pl.Utf8)+ pl.col("tour_id").cast(pl.Utf8))
-            .cast(pl.Int64).alias("agent_id")]) # agent_id ={plan_id*100;tour_id}
+                                          .cast(pl.Int64).alias("agent_id") # agent_id ={plan_id*100;tour_id}
+        ])
     )
     
     # Prep next trip for additional stopping times
@@ -662,9 +724,6 @@ def generate_trips(matsim_trips, edges, vehicles):
             
                 
     return metro_trips
-
-
-# # Format
 
 
 def format_demand(trips):
@@ -771,3 +830,58 @@ def format_demand(trips):
     
     return agents, alts, trips
 
+
+# # Functions for utility components
+
+def mode_utility_params(trips):
+    """
+    This function adds the mode-specific parameters of travel cost.
+
+    Parameters
+    ----------
+    trips : pl.DataFrame
+        A Polars DataFrame containing trips. It has to contain a `mode` variable (MATSim format)
+
+    Returns
+    -------
+    trips : pl.DataFrame
+        The same Polars DataFrame containing mode-specific travel cost parameters: 
+        - mode-specific constant: 'C'
+        - mode-dependent marginal utility of distance: 'gamma_dist'
+        - mode-specific alternative-level constant: 'daily_monetary_constant'
+    """
+    
+    
+    trips = (
+    trips
+    .with_columns([
+        pl.when(pl.col('mode')=='car')
+        .then(pl.lit(-0.4876))
+        .when(pl.col('mode')=='ride')
+        .then(pl.lit(-1.154))
+        .when(pl.col('mode')=='pt')
+        .then(pl.lit(0.4322))
+        .when(pl.col('mode')=='bike')
+        .then(pl.lit(-0.8721))
+        .otherwise(pl.lit(0)).alias('C'),
+        
+        pl.when(pl.col('mode').is_in(['car', 'ride']))
+        .then(pl.lit(-1.49e-04))
+        .when(pl.col('mode').is_in(['freight', 'truck']))
+        .then(pl.lit(-4e-04))
+        .otherwise(pl.lit(0)).alias('gamma_dist'),
+        
+        (pl.col("mode") == "car").any().over('plan_id').alias("uses_car"),
+        (pl.col("mode") == "pt").any().over('plan_id').alias("uses_pt")
+    ])
+    .with_columns([
+        (pl.when(pl.col("uses_car"))
+         .then(-5)
+         .when(pl.col("uses_pt"))
+         .then(-3)
+         .otherwise(0)).alias("daily_monetary_constant")
+        ])
+    .drop('uses_car', 'uses_pt')
+)
+    
+    return trips
