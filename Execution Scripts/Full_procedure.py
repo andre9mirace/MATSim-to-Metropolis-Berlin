@@ -52,8 +52,6 @@ PLAN_PATH = (os.path.join(general_directory, berlin_directory, "berlin-v6.4.outp
 
 # ## Metropolis directories
 
-# In[4]:
-
 
 # Metropolis directories
 METRO_INPUT = (os.path.join(general_directory, pt_10pct_dir, "metro_inputs/")) 
@@ -105,22 +103,11 @@ PARAMETERS ={
 
 import Supply_functions as sup
 
-
-# In[6]:
-
-
 links = sup.read_network(NETWORK_PATH)            # Read network xml
 vehicle_types =  sup.vehicle_reader(VEHICLE_PATH) # Read vehicle xml
 
-
-# In[7]:
-
-
 edges = sup.make_edges_df(links)                # transform to metropolis network
 vehicles = sup.make_vehicles_df(vehicle_types)  # transform to metropolis vehicles
-
-
-
 
 edges_df, vehicles_df = sup.format_supply(edges, vehicles) # format for metropolis input
 
