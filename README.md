@@ -15,6 +15,7 @@ The project uses input and output files from the [Open Berlin Scenario](https://
 
 Each scenario includes custom processing and conversion of MATSim input data (plans, network, and transit schedules) into METROPOLIS format, followed by simulation runs and output comparisons.
 
+
 ---
 
 ## 🗂️ Structure
@@ -33,37 +34,38 @@ Each scenario includes custom processing and conversion of MATSim input data (pl
 │   ├── Supply_functions.py     # Generates supply inputs for METROPOLIS
 │   └── mpl_utils.py            # Unused, kept for legacy reasons
 ```
-Important: You must add the functions/ directory to your path in each notebook:
+
+
+# ⚙️ Requirements	
+- Python 3.10+	
+- METROPOLIS2 simulator v1.1.0 (precompiled CLI version)
+- Typical Python scientific stack: pandas, numpy, matplotlib, etc.
+- Other Python modules: polars, XML Tree, sys, seaborn, json, etc.
+### Important: 
+You must add the functions/ directory to your path in each notebook:
 
 ```python
 import sys
 sys.path.append("../../functions")
+```
+
+---
+# 📊 Results
+- Outputs include travel time distributions, departure times, and visualizations available in the Notebooks/ folder.
+- METROPOLIS2 results are compared to those from MATSim for validation purposes.
+
+---
+# 📦 Data Sources
+All input data comes from the Open Berlin Scenario:
+- Repository: [matsim-berlin](https://github.com/matsim-scenarios/matsim-berlin)
+
+---
+# 📝 References & Acknowledgements
+
+-The MATSim Open Berlin Scenario is developed and maintained by the MATSim community.
+- The METROPOLIS simulator was developed by Lucas Javaudin and André de Palma.
+- This replication study was developed at Cergy Paris Université.
+
 import Demand_functions as dmd
 import Supply_functions as sup
 ```
----
-
-# ⚙️ Requirements	
-	•	Python 3.10+	
-	•	METROPOLIS2 simulator v1.1.0 (precompiled CLI version)
-	•	Typical Python scientific stack: pandas, numpy, matplotlib, etc.
- 	•	Other Python modules: polars, XML Tree, sys, seaborn, json, etc.
-
-
-
-# 📊 Results	
-	•	Outputs include travel time distributions, departure times, and visualizations available in the Notebooks/ folder.
-	•	METROPOLIS2 results are compared to those from MATSim for validation purposes.
-
-# 📦 Data Sources
-All input data comes from the Open Berlin Scenario:
-
-	•	Repository: [matsim-berlin](https://github.com/matsim-scenarios/matsim-berlin)
-
-
-
-# 📝 References & Acknowledgements
-
-	•	The MATSim Open Berlin Scenario is developed and maintained by the MATSim community.
-	•	The METROPOLIS simulator was developed by Lucas Javaudin and André de Palma.
-	•	This replication study was developed at Cergy Paris Université.
