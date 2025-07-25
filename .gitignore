@@ -3,3 +3,5 @@
 
 # Jupyter Notebook backup folders
 .ipynb_checkpoints/
+
+.Rhistory
